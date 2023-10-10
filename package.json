@@ -1,0 +1,78 @@
+{
+  "name": "midiaries-admin-backend",
+  "description": "MI Diaries Admin - Backend",
+  "version": "1.8.3",
+  "homepage": "",
+  "main": "src",
+  "keywords": [
+    "feathers"
+  ],
+  "author": {
+    "name": "Russ Werner",
+    "email": "wernerru@msu.edu"
+  },
+  "contributors": [],
+  "bugs": {},
+  "directories": {
+    "lib": "src",
+    "test": "test/",
+    "config": "config/"
+  },
+  "engines": {
+    "node": ">= 12.0.0",
+    "yarn": ">= 0.18.0"
+  },
+  "scripts": {
+    "test": "yarn run eslint && yarn run mocha",
+    "eslint": "eslint src/. test/. --config .eslintrc.json",
+    "dev": "nodemon src/",
+    "start": "node src/",
+    "mocha": "mocha test/ --recursive --exit"
+  },
+  "dependencies": {
+    "@feathersjs/authentication": "^4.3.0",
+    "@feathersjs/authentication-local": "^4.3.0",
+    "@feathersjs/authentication-oauth": "^4.3.0",
+    "@feathersjs/configuration": "^4.3.0",
+    "@feathersjs/errors": "^4.3.0",
+    "@feathersjs/express": "^4.3.0",
+    "@feathersjs/feathers": "^4.3.0",
+    "@feathersjs/socketio": "^4.3.0",
+    "@google-cloud/speech": "^4.10.2",
+    "@google-cloud/storage": "^6.1.0",
+    "age-calculator": "^1.0.0",
+    "authentication-local-management-v4": "https://github.com/wernerru/feathers-authentication-management-v4.git#semver:4.0.5",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^8.1.0",
+    "feathers-authentication-hooks": "^1.0.0",
+    "feathers-hooks-common": "^4.20.7",
+    "feathers-mailer": "^3.0.1",
+    "feathers-sequelize": "^6.0.1",
+    "feathers-shallow-populate": "^2.0.1",
+    "fluent-ffmpeg": "^2.1.2",
+    "helmet": "^3.20.0",
+    "json2csv": "^5.0.1",
+    "jszip": "^3.10.0",
+    "jwt-decode": "^2.2.0",
+    "lodash": "^4.17.21",
+    "multer": "^1.4.2",
+    "mysql2": "^1.7.0",
+    "nanoid": "^2.1.11",
+    "nodemailer-smtp-transport": "^2.7.4",
+    "pug": "^2.0.4",
+    "sequelize": "^5.16.0",
+    "sequelize-cli": "^5.5.1",
+    "serve-favicon": "^2.5.0",
+    "uuid": "^8.3.0",
+    "wav-file-info": "^0.0.10",
+    "winston": "^3.0.0",
+    "zip-lib": "^0.7.2"
+  },
+  "devDependencies": {
+    "axios": "^0.19.0",
+    "eslint": "^6.2.2",
+    "mocha": "^6.2.0",
+    "nodemon": "^1.19.1"
+  }
+}

@@ -1,0 +1,43 @@
+const { authenticate } = require('@feathersjs/authentication');
+const { iff, isProvider  } = require('feathers-hooks-common');
+const { isNotAdmin, cancel } = require('../../hooks/helpers');
+
+module.exports = {
+  before: {
+    all: [
+      iff(isProvider('external'), authenticate('jwt')),
+      iff(isProvider('external'), iff(isNotAdmin('ra,ga'), cancel())),
+    ],
+    find: [],
+    get: [],
+    create: [
+      async (hook) => {
+        const curSeq = await hook.app.service('snippets').find({ query: { diaryId: hook.data.diaryId, $limit: 0} });
+        hook.data.metadata = { ...hook.data.metadata, sequence: curSeq.total + 1 };
+      },
+    ],
+    update: [],
+    patch: [],
+    remove: []
+  },
+
+  after: {
+    all: [],
+    find: [],
+    get: [],
+    create: [],
+    update: [],
+    patch: [],
+    remove: []
+  },
+
+  error: {
+    all: [],
+    find: [],
+    get: [],
+    create: [],
+    update: [],
+    patch: [],
+    remove: []
+  }
+};

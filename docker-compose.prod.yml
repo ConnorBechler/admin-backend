@@ -1,0 +1,17 @@
+version: "3.4"
+networks:
+  default:
+    external:
+      name: backend
+
+services:
+  api:
+    image: (registry-host:registry-port)/midiaries/admin-backend:latest
+    container_name: midiaries-admin-backend
+    restart: unless-stopped
+    volumes:
+      - /storage/midiaries-admin:/opt/storage
+    expose:
+      - ${PORT}
+    env_file:
+      - .env

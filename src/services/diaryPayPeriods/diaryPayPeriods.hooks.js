@@ -1,0 +1,48 @@
+const { authenticate } = require('@feathersjs/authentication');
+const { iff, isProvider } = require('feathers-hooks-common');
+const { isNotAdmin, cancel } = require('../../hooks/helpers');
+
+module.exports = {
+  before: {
+    all: [
+    ],
+    find: [],
+    get: [],
+    create: [
+      iff(isProvider('external'), authenticate('jwt')),
+      iff(isProvider('external'), iff(isNotAdmin('ra,ga'), cancel())),
+    ],
+    update: [
+      iff(isProvider('external'), authenticate('jwt')),
+      iff(isProvider('external'), iff(isNotAdmin('ra,ga'), cancel())),
+    ],
+    patch: [
+      iff(isProvider('external'), authenticate('jwt')),
+      iff(isProvider('external'), iff(isNotAdmin('ra,ga'), cancel())),
+    ],
+    remove: [
+      iff(isProvider('external'), authenticate('jwt')),
+      iff(isProvider('external'), iff(isNotAdmin('ra,ga'), cancel())),
+    ]
+  },
+
+  after: {
+    all: [],
+    find: [],
+    get: [],
+    create: [],
+    update: [],
+    patch: [],
+    remove: []
+  },
+
+  error: {
+    all: [],
+    find: [],
+    get: [],
+    create: [],
+    update: [],
+    patch: [],
+    remove: []
+  }
+};

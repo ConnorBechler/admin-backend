@@ -1,0 +1,23 @@
+version: "3.4"
+networks:
+  default:
+    external:
+      name: backend
+      
+services:
+  api:
+    build:
+      context: .
+      network: backend
+    image: midiaries-admin-backend:latest
+    container_name: midiaries-admin-backend
+    restart: unless-stopped
+    volumes:
+      - ../storage:/opt/storage
+      - ./gcs-key.json:/opt/app/gcs-key.json
+    expose:
+      - ${PORT}
+    ports: 
+      - "3032:${PORT}"
+    env_file:
+      - .env

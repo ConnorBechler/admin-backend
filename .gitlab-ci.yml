@@ -1,0 +1,35 @@
+variables:
+  DEV_TAG: dev
+stages:
+  - build-prod
+  - build-dev
+image: docker:stable
+
+before_script:
+  - docker login $REGISTRY_URL
+  - 'which ssh || ( apk add --update openssh )'
+
+build-prod:
+  stage: build-prod
+  rules:
+    - if: '$CI_COMMIT_TAG != null && $DEV_TAG !~ $CI_COMMIT_TAG'
+  script:
+    - docker pull $REGISTRY_URL/$CONTAINER_IMAGE:latest || true
+    - docker tag $REGISTRY_URL/$CONTAINER_IMAGE:latest $REGISTRY_URL/$CONTAINER_IMAGE:rollback || true
+    - docker build -f Dockerfile --cache-from $REGISTRY_URL/$CONTAINER_IMAGE:rollback --tag $REGISTRY_URL/$CONTAINER_IMAGE:latest --tag $REGISTRY_URL/$CONTAINER_IMAGE:$CI_COMMIT_TAG .
+    - docker push $REGISTRY_URL/$CONTAINER_IMAGE:latest
+    - docker push $REGISTRY_URL/$CONTAINER_IMAGE:rollback
+    - docker push $REGISTRY_URL/$CONTAINER_IMAGE:$CI_COMMIT_TAG
+    - ssh $SSH_USER -i $SSH_KEY_LOCATION "cd $COMPOSE_LOCATION && docker-compose up -d $COMPOSE_SERVICE"
+
+build-dev:
+  stage: build-dev
+  rules:
+    - if: '$CI_COMMIT_TAG != null && $DEV_TAG =~ $CI_COMMIT_TAG'
+  script:
+    - docker pull $REGISTRY_URL/$CONTAINER_IMAGE:latest-dev || true
+    - docker tag $REGISTRY_URL/$CONTAINER_IMAGE:latest-dev $REGISTRY_URL/$CONTAINER_IMAGE:rollback-dev || true
+    - docker build -f Dockerfile --cache-from $REGISTRY_URL/$CONTAINER_IMAGE:rollback-dev --tag $REGISTRY_URL/$CONTAINER_IMAGE:latest-dev --tag $REGISTRY_URL/$CONTAINER_IMAGE:$CI_COMMIT_TAG .
+    - docker push $REGISTRY_URL/$CONTAINER_IMAGE:latest-dev
+    - docker push $REGISTRY_URL/$CONTAINER_IMAGE:rollback-dev
+    - docker push $REGISTRY_URL/$CONTAINER_IMAGE:$CI_COMMIT_TAG
