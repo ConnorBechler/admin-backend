@@ -1,6 +1,5 @@
 const axios = require('axios');
 const querystring = require('querystring');
-const { AgeFromDateString } = require('age-calculator');
 const { Forbidden, BadRequest } = require('@feathersjs/errors');
 const mailer = require('../../mailer/notifier');
 
@@ -28,19 +27,8 @@ const runner = async (app, { params }) => {
 
   // true for now, disabling recaptcha
   if (true) {
-    const age = params.metadata.dateOfBirth ? new AgeFromDateString(params.metadata.dateOfBirth).age : null;
     if (params.metadata.educationLevel && !Array.isArray(params.metadata.educationLevel)) {
       params.metadata.educationLevel = [ params.metadata.educationLevel ];
-    }
-    
-    if (age) {
-      if (age < 13) {
-        params.metadata.age_category = "Kid";
-      } else if (age >= 13 && age < 18) {
-        params.metadata.age_category = "Teen";
-      } else if (age >= 18) {
-        params.metadata.age_category = "Adult";
-      }
     }
 
     params.metadata.frequency = params.metadata.frequency ? params.metadata.frequency : "weekly";

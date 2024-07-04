@@ -1,7 +1,7 @@
 {
   "name": "mi-diaries-framework-backend",
   "description": "MI Diaries Framework - Backend",
-  "version": "1.11.3",
+  "version": "1.11.4",
   "homepage": "",
   "main": "src",
   "keywords": [
