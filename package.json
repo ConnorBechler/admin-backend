@@ -1,7 +1,7 @@
 {
-  "name": "midiaries-admin-backend",
-  "description": "MI Diaries Admin - Backend",
-  "version": "1.8.3",
+  "name": "mi-diaries-framework-backend",
+  "description": "MI Diaries Framework - Backend",
+  "version": "1.11.2",
   "homepage": "",
   "main": "src",
   "keywords": [

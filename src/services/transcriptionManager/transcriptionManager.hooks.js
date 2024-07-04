@@ -1,16 +1,17 @@
 const { authenticate } = require('@feathersjs/authentication');
-const { iff, isProvider  } = require('feathers-hooks-common');
-const { isNotAdmin, cancel, checkForWorkerKey, checkWorkerKey, cleanupRemoteWorkerRequest } = require('../../hooks/helpers');
+const { iff } = require('feathers-hooks-common');
+const { isNotAdmin, cancel } = require('../../hooks/helpers');
+
 
 module.exports = {
   before: {
-    all: [
-      iff(isProvider('external'), iff(checkForWorkerKey, checkWorkerKey(), cleanupRemoteWorkerRequest())
-        .else(authenticate('jwt'), iff(isNotAdmin('ra,ga'), cancel()))),
-    ],
+    all: [],
     find: [],
     get: [],
-    create: [],
+    create: [
+      authenticate('jwt'),
+      iff(isNotAdmin('transcriptManager'), cancel()),
+    ],
     update: [],
     patch: [],
     remove: []

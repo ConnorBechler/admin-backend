@@ -10,9 +10,12 @@ const reportOutput = async (app, { searchString, params: dataParams}, params) =>
 
   searchString = searchString.replace(/'/g, "\\'")
 
+  const queryWhere = [];
+
   const sequelizeClient = app.get('sequelizeClient');
   let rawq = `SELECT subjects.shortcode AS 'subjectId',
       diaries.id AS 'diaryId',
+      diaries.metadata,
       transcriptSentences.id AS 'sentenceId',
       transcriptSentences.startTime,
       transcriptSentences.endTime,
@@ -25,10 +28,24 @@ const reportOutput = async (app, { searchString, params: dataParams}, params) =>
       LEFT JOIN profiles ON profiles.id = diaries.profileId
       LEFT JOIN subjects ON subjects.id = profiles.subjectId
     WHERE
-      match(transcriptSentences.content) against('${searchString}' IN BOOLEAN MODE)
+      `;
+
+  if (dataParams.completedOnly) {
+    queryWhere.push(`diaries.metadata ->> '$.editingStatus' = "Completed"`);
+  }
+
+  if (dataParams.regexSearch) {
+    queryWhere.push(`transcriptSentences.content REGEXP '${searchString}'`);
+  } else {
+    queryWhere.push(`match(transcriptSentences.content) against('${searchString}' IN BOOLEAN MODE)`);
+  }
+
+  rawq += queryWhere.join(`
+      and `);
+
+  rawq += `
     HAVING
-      subjectId IS NOT NULL
-    LIMIT ${process.env.FTS_MAX_RESULTS || 2500}`;
+      subjectId IS NOT NULL`;
 
   const ret = await sequelizeClient.query(rawq, { type: Sequelize.QueryTypes.SELECT });
   return ret;

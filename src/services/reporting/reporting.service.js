@@ -79,5 +79,8 @@ module.exports = function (app) {
     }
   );
   
+  const reportingService = app.service('/reporting');
+  reportingService.hooks(hooks);
+  
 };
 

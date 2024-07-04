@@ -59,6 +59,7 @@ module.exports = function(app) {
              html: compiledText('resetUserPassword', {
                 prefix: process.env.SUBJECT_PREFIX,
                 appName: process.env.APP_NAME,
+                signatureEmail: process.env.FROM_SIGNATURE_EMAIL,
                 link: getLink('login/reset', obj.resetToken)
               })
           }
@@ -73,6 +74,7 @@ module.exports = function(app) {
              html: compiledText('adminCreatedUser', {
                 prefix: process.env.SUBJECT_PREFIX,
                 appName: process.env.APP_NAME,
+                signatureEmail: process.env.FROM_SIGNATURE_EMAIL,
                 link: getLink('login/forgot', obj.email)
               })
           }
@@ -87,6 +89,7 @@ module.exports = function(app) {
              html: compiledText('verifyUserSignup', {
                 prefix: process.env.SUBJECT_PREFIX,
                 appName: process.env.APP_NAME,
+                signatureEmail: process.env.FROM_SIGNATURE_EMAIL,
                 link: getLink('login/verify', obj.verifyToken)
               })
           }
@@ -101,6 +104,7 @@ module.exports = function(app) {
              html: compiledText('confirmVerification', {
               prefix: process.env.SUBJECT_PREFIX,
               appName: process.env.APP_NAME,
+              signatureEmail: process.env.FROM_SIGNATURE_EMAIL,
             })
           }
           return sendEmail(email)
@@ -114,6 +118,7 @@ module.exports = function(app) {
             html: compiledText('sendNoticeToAdminSignup', {
               prefix: process.env.SUBJECT_PREFIX,
               appName: process.env.APP_NAME,
+              signatureEmail: process.env.FROM_SIGNATURE_EMAIL,
               obj: obj,
               link: `${getHost()}admin/subjects/${obj.id}`,
             })

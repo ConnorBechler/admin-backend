@@ -1,4 +1,4 @@
-const { Forbidden, BadRequest } = require('@feathersjs/errors');
+const { BadRequest, Forbidden, NotAuthenticated, TooManyRequests } = require('@feathersjs/errors');
 const generate = require('nanoid/generate');
 const Sequelize = require('sequelize');
 
@@ -7,7 +7,8 @@ exports.isNotAdmin = roles => context => {
   if (roles) {
     rolesToCheck = [...rolesToCheck, ...roles.split(',')];
   }
-  const ret = rolesToCheck.every(adminRole => context.params.user.roles.indexOf(adminRole.trim().toLowerCase()) === -1);
+  const userRoles = context.params.user.roles.map(role => role.toLowerCase());
+  const ret = rolesToCheck.every(adminRole => userRoles.indexOf(adminRole.trim().toLowerCase()) === -1);
   return ret;
 };
 
@@ -15,6 +16,82 @@ exports.isAction = (...args) => hook => args.includes(hook.data.action);
 
 exports.cancel = error => hook => {
   throw new Forbidden(error || 'Ha. No. No Touchy.');
+}
+
+exports.checkForWorkerKey = (hook) => {
+  if ((hook.params && hook.params.query && hook.params.query.remoteWorkerKey) || (hook.data && hook.data.remoteWorkerKey) ) {
+    return hook;
+  } else {
+    return false;
+  }
+}
+
+
+exports.checkWorkerKey = (hook) => {
+  return async hook => {
+    const remoteWorkerKey = hook.method === 'create' ? hook.data.remoteWorkerKey : hook.params.query.remoteWorkerKey;
+    if (remoteWorkerKey) {
+      await hook.app.service('remoteWorkers').find( { query: {
+        secret: remoteWorkerKey,
+      }})
+      .then((resp) => {
+        if (resp && resp.total) {
+          const remoteWorker = resp.data[0];
+          if (!remoteWorker.enabled) {
+            throw new NotAuthenticated('Error: Worker currently deactivated');
+          }
+          if (hook.method === 'create') {
+            hook.data.remoteWorker = {
+              id: remoteWorker.id,
+              maxConcurrent: remoteWorker.maxConcurrent,
+              metadata: remoteWorker.metadata,
+            };
+          } else {
+            hook.params.query.api = true;
+          }
+        } else {
+          throw new NotAuthenticated('Error: Invalid worker secret');
+        }
+      })
+      .catch((err) => {
+        throw err;
+      })
+    } else {
+      throw new BadRequest('Error: Worker key required');
+    }
+  }
+}
+
+exports.checkWorkerJobs = (hook) => {
+  return async hook => {
+    if (hook.data && hook.data.action && hook.data.action == 'checkForWork') {
+      const activeJobs = await hook.app.service('processingJobs').find( { query: {
+        remoteWorkerId: hook.data.remoteWorker.id,
+        status: {
+          $ne: 999,
+        },
+        $limit: 0,
+      }});
+      if (activeJobs && activeJobs.total) {
+        if (activeJobs.total >= hook.data.remoteWorker.maxConcurrent) {
+          throw new TooManyRequests('Error: Reached maximum number of concurrent jobs');
+        }
+      }
+    }
+  }
+}
+
+exports.cleanupRemoteWorkerRequest = (hook) => {
+  return async hook => {
+    if (hook.data && hook.data.remoteWorkerKey) {
+      delete hook.data.remoteWorkerKey;
+    }
+    if (hook.params && hook.params.query && hook.params.query.remoteWorkerKey) {
+      delete hook.params.query.remoteWorkerKey;
+    }
+    console.log('hook.data: ', hook.data);
+    console.log('hook.params: ', hook.params);
+  }
 }
 
 exports.correctedDateTime = (date) => {
@@ -53,7 +130,7 @@ exports.assignNextSID = async hook => {
 
   const ret = await sequelizeClient.query(rawq, { type: Sequelize.QueryTypes.SELECT });
   delete hook.data.assignSID;
-  hook.data.shortcode = `${process.env.SUBJECT_PREFIX}-${ret.length ? ret[0].sid.toString().padStart(process.env.SUBJECT_LENGTH, '0') : "1".padStart(process.env.SUBJECT_LENGTH, '0')}`;
+  hook.data.shortcode = `${process.env.SUBJECT_PREFIX}-${ret[0].sid.toString().padStart(process.env.SUBJECT_LENGTH, '0') || "1".padStart(process.env.SUBJECT_LENGTH, '0')}`;
 }
 
 exports.generateRandomShortcode = config => async hook => {

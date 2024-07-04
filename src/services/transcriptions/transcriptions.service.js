@@ -6,7 +6,8 @@ const { v4: uuidv4 } = require('uuid');
 const { Transcriptions } = require('./transcriptions.class');
 const createModel = require('../../models/transcriptions.model');
 const hooks = require('./transcriptions.hooks');
-const { text, textgrid } = require('../converter/converter.service.js');
+const { text, textgrid, speaker } = require('../converter/converter.service.js');
+const { BadRequest } = require('@feathersjs/errors');
 
 module.exports = function (app) {
   const Model = createModel(app);
@@ -116,8 +117,32 @@ module.exports = function (app) {
       },
     },
     async (req, res, next) => {
-      req.params.type === 'textgrid' ? textgrid(req, res, next) : text (req, res, next);
+      if (!req.params && !req.params.type) {
+        throw new BadRequest(`Error: type is a required key`);
+      }
+      switch (req.params.type) {
+        case 'textgrid':
+          textgrid(req, res, next);
+          break;
+        case 'tsv':
+          text(req, res, next);
+          break;
+        case 'csv':
+          text(req, res, next);
+          break;
+        case 'speaker':
+          speaker(req, res, next);
+          break;
+        // Add more cases as needed for other types
+        default:
+          throw new BadRequest(`Error: invalid type '${req.params.type}'`);
+          break;
+      }
     }
   );
+
+  const transcriptDownloadService = app.service('/transcriptions/:transcriptionId/:type');
+
+  transcriptDownloadService.hooks(hooks);
 
 };

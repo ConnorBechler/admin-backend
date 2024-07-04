@@ -1,7 +1,7 @@
 const { authenticate } = require('@feathersjs/authentication');
 const { iff, isProvider } = require('feathers-hooks-common');
 const { BadRequest } = require('@feathersjs/errors');
-const { isNotAdmin, cancel } = require('../../hooks/helpers');
+const { isNotAdmin, cancel, checkForWorkerKey, checkWorkerKey, cleanupRemoteWorkerRequest } = require('../../hooks/helpers');
 
 
 function checkUnique() {
@@ -25,28 +25,22 @@ function checkUnique() {
 
 module.exports = {
   before: {
-    all: [],
+    all: [
+      iff(isProvider('external'), iff(checkForWorkerKey, checkWorkerKey(), cleanupRemoteWorkerRequest())
+        .else(authenticate('jwt'), iff(isNotAdmin('ra,ga'), cancel()))),
+    ],
     find: [],
     get: [],
     create: [
-      iff(isProvider('external'), authenticate('jwt')),
-      iff(isProvider('external'), iff(isNotAdmin('ra,ga'), cancel())),
       checkUnique(),
     ],
     update: [
-      iff(isProvider('external'), authenticate('jwt')),
-      iff(isProvider('external'), iff(isNotAdmin('ra,ga'), cancel())),
       checkUnique(),
     ],
     patch: [
-      iff(isProvider('external'), authenticate('jwt')),
-      iff(isProvider('external'), iff(isNotAdmin('ra,ga'), cancel())),
       checkUnique(),
     ],
-    remove: [
-      iff(isProvider('external'), authenticate('jwt')),
-      iff(isProvider('external'), iff(isNotAdmin('ra,ga'), cancel())),
-    ]
+    remove: []
   },
 
   after: {

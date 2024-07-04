@@ -3,14 +3,9 @@ const { iff, isProvider } = require('feathers-hooks-common');
 const { Forbidden } = require('@feathersjs/errors');
 const fs = require('fs');
 const TranscriberService = require('../transcriber/transcriber.service.js');
+const ManualCreateTranscript = require('../transcriptMaintenance/actions/manualCreate.js');
 const { getMetadata, saveStreamCopy, saveWavCopy } = require('../converter/converter.service.js');
 const { isNotAdmin, cancel } = require('../../hooks/helpers');
-
-const checkKey = (hook) => {
-    if (hook.data.secretKey !== process.env.FORM_SECRET) {
-      throw new Forbidden('Fatal: no secret key sent');
-    }
-};
 
 const fileTypes = [
   "m4a",
@@ -21,6 +16,38 @@ const fileTypes = [
   "flac",
   "mp3",
 ];
+
+const textFileTypes = [
+  "txt",
+  "tsv"
+];
+
+const checkKey = (hook) => {
+    if (hook.data.secretKey !== process.env.FORM_SECRET) {
+      throw new Forbidden('Fatal: no secret key sent');
+    }
+};
+
+const processManualTranscript = async (hook, docId) => {
+  return new Promise(async (resolve, reject) => {
+    hook.params.files.forEach(async uploadedTextFile => {
+      const textDocId = uploadedTextFile.filename.split('.')[0];
+      const textExt = uploadedTextFile.filename.split('.')[1];
+      if (textFileTypes.some(textFileType => textExt.includes(textFileType))) {
+        ManualCreateTranscript(hook.app, { audioDocId: docId, textDocId })
+          .then(ret => {
+            console.log('imported transcription for', docId);
+            resolve(true);
+          })
+          .catch(async err => {
+            console.log('ManualCreateTranscript error:', err)
+          });
+      } else {
+        resolve(true);
+      }
+    })
+  })
+}
 
 module.exports = {
   before: {
@@ -62,17 +89,26 @@ module.exports = {
     create: [
       async hook => {
         if (hook.params && hook.params.files) {
+          const shouldTranscribe = hook.data.transcribe ? hook.data.transcribe === 'true' : true;
+          if (hook.data.audioDocumentId) {
+            processManualTranscript(hook, hook.data.audioDocumentId);
+          }
           hook.params.files.forEach(async uploadedFile => {
             const docId = uploadedFile.filename.split('.')[0];
             const ext = uploadedFile.filename.split('.')[1];
             if (!hook.data.parentId && fileTypes.some(fileType => ext.includes(fileType))) {
               await saveWavCopy(hook.app, hook.app.get('uploads'), docId, uploadedFile.filename)
+                .then(async () => {
+                  await processManualTranscript(hook, docId);
+                })
                 .then(() => {
-                  TranscriberService(hook.app, docId)
-                    .catch(async err => {console.log('TranscriberService error:', err)});
+                  if (shouldTranscribe) {
+                    TranscriberService(hook.app, docId)
+                      .catch(async err => {console.log('TranscriberService error:', err)});
+                    console.log('kicked off transcription for', docId);
+                  }
                 })
                 .catch(async err => {console.log('saveWavCopy error:', err)});
-              console.log('kicked off transcription for', docId);
             }
             if (fileTypes.some(fileType => ext.includes(fileType))) {
               getMetadata(hook.app, docId, (hook.data.parentId) ? 'snippets' : 'diaries')

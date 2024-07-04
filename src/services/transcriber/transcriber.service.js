@@ -95,9 +95,6 @@
     return new Promise(async (resolve, reject) => {
       const curSeq = await transcriptionService.find({ query: {
           documentId,
-          createdAt: {
-            $lt: new Date()
-          },
           $limit: 0}
         });
       const transcription = await transcriptionService.create({

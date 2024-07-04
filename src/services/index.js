@@ -19,6 +19,10 @@ const subjects = require('./subjects/subjects.service.js');
 const subjectMaintenance = require('./subjectMaintenance/subjectMaintenance.service.js');
 const diaryPayPeriods = require('./diaryPayPeriods/diaryPayPeriods.service.js');
 const dictionaryWords = require('./dictionaryWords/dictionaryWords.service.js');
+const remoteWorkers = require('./remoteWorkers/remoteWorkers.service.js');
+const processing = require('./processing/processing.service.js');
+const processingJobs = require('./processingJobs/processingJobs.service.js');
+const transcriptionManager = require('./transcriptionManager/transcriptionManager.service.js');
 module.exports = function (app) {
   app.configure(configs);
   app.configure(mailer);
@@ -40,4 +44,8 @@ module.exports = function (app) {
   app.configure(subjectMaintenance);
   app.configure(diaryPayPeriods);
   app.configure(dictionaryWords);
+  app.configure(remoteWorkers);
+  app.configure(processing);
+  app.configure(processingJobs);
+  app.configure(transcriptionManager);
 };
