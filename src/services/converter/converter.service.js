@@ -3,6 +3,7 @@ const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 const { parseAsync } = require('json2csv');
 const jszip = require('jszip');
+const { BadRequest, Forbidden } = require('@feathersjs/errors');
 
 exports.getMetadata = async (app, id, serviceName) => {
   const documentService = app.service('documents');
@@ -43,8 +44,14 @@ exports.audio = async (req, res, next) => {
   };
   const options = { ...defaults, ...req.query, ...req.body };
   options.channels = options.channels * 1;
-  options.redact = options.redact !== 'false';
-  options.raw = options.raw !== 'false';
+  options.redact = (options.redact != "false");
+  options.raw = (options.raw && options.raw != "false");
+  options.api = (options.api && options.api != "false");
+  if (options.api) {
+    options.raw = true;
+    options.redact = false;
+    options.to = 'wav';
+  }
   const outputFileName = `${newid}${options.redact ? '-redacted' : ''}.${options.to}`;
   const diary = await res.app.service('diaries').get(res.data.parentId);
   const sid = diary.profile.subject ? diary.profile.subject.shortcode : 'NOSID';
@@ -52,7 +59,7 @@ exports.audio = async (req, res, next) => {
   let runner = ffmpeg(destination + '/' + res.data.id + '.' + res.data.fileext);
   try {
     if (options.to == 'wav' && !options.redact) {
-      res.setHeader('X-FileName', options.raw ? res.data.id + '.wav' : sid + '_' + (diary.metadata.diaryDate || new Date(new Date(diary.createdAt).getTime() - new Date(diary.createdAt).getTimezoneOffset() * 60 * 1000).toISOString().substr(0, 10)) + '_' + (diary.metadata.sequence.toString().padStart(2, 0) || '00') + (options.redact ? '-redacted.' : '.') + options.to);
+      res.setHeader('X-FileName', options.raw ? res.data.id + '.wav' : sid + '_' + (diary.metadata.diaryDate || new Date(new Date(diary.createdAt).getTime() - new Date(diary.createdAt).getTimezoneOffset() * 60 * 1000).toISOString().substr(0, 10)) + '_' + (diary.metadata.sequence.toString().padStart(2, 0) || '00') + '.' + options.to);
       res.download(destination + '/wav/' + res.data.id + '.wav', res.data.id + '.wav');
     }
     else {
@@ -155,6 +162,8 @@ const createSentenceObjects = (sid, options, sentences) => {
   });
 }
 
+exports.createSentenceObjects = createSentenceObjects;
+
 exports.text = async (req, res, next) => {
   const type = req.params.type;
   const data = res.data;
@@ -197,6 +206,7 @@ const createTextGridHeader = (sid, data, speakerCount = 1) => {
   ret.push('item []:\n');
   return ret;
 }
+exports.createTextGridHeader = createTextGridHeader;
 
 const createTextGridIntervalHeader = (ret, idx, name, data) => {
   ret.push(`  item[${idx + 1}]\n`);
@@ -207,6 +217,7 @@ const createTextGridIntervalHeader = (ret, idx, name, data) => {
   ret.push(`    intervals: size = ${data.length}\n`);
   return ret;
 }
+exports.createTextGridIntervalHeader = createTextGridIntervalHeader;
 
 const createTextGridInterval = (ret, idx, data) => {
   ret.push(`    intervals [${idx + 1}]\n`);
@@ -215,6 +226,7 @@ const createTextGridInterval = (ret, idx, data) => {
   ret.push(`      text = "${data.content.replace(/"/g, '\'')}"\n`);
   return ret;
 }
+exports.createTextGridInterval = createTextGridInterval;
 
 const splitSpeakers = (speakerNumbers, sentences) => {
   const ret = [];
@@ -224,43 +236,140 @@ const splitSpeakers = (speakerNumbers, sentences) => {
   return ret;
 }
 
+const createSpeakerData = diary => {
+  const speakerData = [];
+
+  if (!diary.profile.subject) {
+    throw new BadRequest('Error: profile unlinked to subject');
+  }
+  const subject = diary.profile.subject;
+
+  if (!subject.shortcode) {
+    throw new BadRequest('Error: subject not yet assigned SID');
+  }
+
+  if (!subject.metadata.coded.birthYear) {
+    throw new BadRequest('Error: subject does not have coded metadata: birthYear');
+  }
+
+  if (!subject.metadata.coded.gender) {
+    throw new BadRequest('Error: subject does not have coded metadata: gender');
+  }
+
+  const curYear = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60 * 1000).toISOString().substr(0, 4)
+
+  // required: sid
+  speakerData.push('--first_name\n');
+  speakerData.push(`${subject.shortcode}\n`);
+
+  // required: age
+  speakerData.push('--age\n');
+  speakerData.push(`${curYear - subject.metadata.coded.birthYear}\n`);
+
+  // required: coded gender (M/F/X)
+  speakerData.push('--sex\n');
+  speakerData.push(`${subject.metadata.coded.gender}\n`);
+
+  if (subject.metadata.coded.ethnicityNotes) {
+    speakerData.push('--ethnicity\n');
+    speakerData.push(`${subject.metadata.coded.ethnicityNotes}\n`);
+  }
+  if (subject.metadata.coded.yearsOfSchooling) {
+    speakerData.push('--years_of_schooling\n');
+    speakerData.push(`${subject.metadata.coded.yearsOfSchooling}\n`);
+  }
+  if (diary.metadata.diaryDate) {
+    speakerData.push('--year\n');
+    speakerData.push(`${diary.metadata.diaryDate.substr(0,4)}\n`);
+  }
+  if (subject.metadata.coded.locationRaisedNotes) {
+    speakerData.push('--location\n');
+    speakerData.push(`${subject.metadata.coded.locationRaisedNotes}`);
+  }
+
+  return speakerData;
+}
+
 exports.textgrid = async (req, res, next) => {
-  const type = req.params.type;
-  const data = res.data;
-  const options = req.query;
-  options.redact = (options.redact != "false");
-  options.raw = (options.raw != "false");
-  const transcription = await res.app.service('transcriptions').get(data.id);
-  const doc = await res.app.service('documents').get(transcription.documentId);
-  const diary = await res.app.service('diaries').get(doc.parentId);
-  const { data: sentences } = await res.app.service('transcriptSentences').find({ query: { transcriptionId: transcription.id }});
-  const sid = diary.profile.subject ? diary.profile.subject.shortcode : 'NOSID';
-  const tsSentences = createSentenceObjects(sid, options, sentences);
-  let filename = options.raw ? transcription.documentId + (options.redact ? '-redacted' : '') : (sid + '_' + (diary.metadata.diaryDate || new Date(new Date(diary.createdAt).getTime() - new Date(diary.createdAt).getTimezoneOffset() * 60 * 1000).toISOString().substr(0, 10)) + '_' + (diary.metadata.sequence.toString().padStart(2, 0) || '00') + '_rev' + transcription.revision + (options.redact ? '-redacted' : ''));
-  filename = transcription.edited ? `${filename}-corrected` : filename;
-  const speakerNumbers = [...new Set(tsSentences.map(s => s.metadata.speaker))];
+  try {
+    const type = req.params.type;
+    const data = res.data;
+    const options = req.query;
+    options.redact = (options.redact != "false");
+    options.raw = (options.raw && options.raw != "false");
+    options.api = (options.api && options.api != "false");
+    if (options.api) {
+      options.raw = true;
+      options.redact = false;
+    }
 
-  const ret = createTextGridHeader(sid, tsSentences, speakerNumbers.length);
+    const transcription = await res.app.service('transcriptions').get(data.id);
+    const doc = await res.app.service('documents').get(transcription.documentId);
+    const diary = await res.app.service('diaries').get(doc.parentId);
+    const { data: sentences } = await res.app.service('transcriptSentences').find({ query: { transcriptionId: transcription.id }});
+    const sid = diary.profile.subject ? diary.profile.subject.shortcode : 'NOSID';
+    const tsSentences = createSentenceObjects(sid, options, sentences);
+    let filename = options.raw ? transcription.documentId + (options.redact ? '-redacted' : '') : (sid + '_' + (diary.metadata.diaryDate || new Date(new Date(diary.createdAt).getTime() - new Date(diary.createdAt).getTimezoneOffset() * 60 * 1000).toISOString().substr(0, 10)) + '_' + (diary.metadata.sequence.toString().padStart(2, 0) || '00') + '_rev' + transcription.revision + (options.redact ? '-redacted' : '') + (transcription.edited ? '-corrected' : ''));
+    const speakerNumbers = [...new Set(tsSentences.map(s => s.metadata.speaker))];
 
-  const speakers = [];
-  speakerNumbers.forEach(sn => {
-    speakers.push(tsSentences.filter(s => s.metadata.speaker == sn));
-  });
+    const speakerData = createSpeakerData(diary);
 
-  speakers.forEach((sp, idx) => {
-    createTextGridIntervalHeader(ret, idx, idx == 0 ? sid : `${sid}-${idx + 1}`, sp);
-    sp.forEach((s, idx) => {
-      createTextGridInterval(ret, idx, s);
+    const ret = createTextGridHeader(sid, tsSentences, speakerNumbers.length);
+
+    const speakers = [];
+    speakerNumbers.forEach(sn => {
+      speakers.push(tsSentences.filter(s => s.metadata.speaker == sn));
     });
-  });
 
-  const zip = new jszip();
-  zip.file(`${filename}.textgrid`, ret.join(''));
-  zip.file(`${filename}.wav`, fs.readFileSync(`${res.app.get('uploads')}/wav/${doc.id}.wav`));
-  zip.generateAsync({type: 'nodebuffer'})
-    .then(function(content) {
-      res.setHeader('X-FileName', `${filename}.zip`);
-      res.attachment(`${filename}.zip`);
-      res.send(content)
-    }.bind(res));
+    speakers.forEach((sp, idx) => {
+      createTextGridIntervalHeader(ret, idx, idx == 0 ? sid : `${sid}-${idx + 1}`, sp);
+      sp.forEach((s, idx) => {
+        createTextGridInterval(ret, idx, s);
+      });
+    });
+
+    const zip = new jszip();
+    if (options.api) {
+      res.setHeader('X-FileName', `${filename}.textgrid`);
+      res.attachment(`${filename}.textgrid`);
+      res.send(ret.join(''));
+    } else {
+      zip.file(`${filename}.speaker`, speakerData.join(''));
+      zip.file(`${filename}.textgrid`, ret.join(''));
+      zip.file(`${filename}.wav`, fs.readFileSync(`${res.app.get('uploads')}/wav/${doc.id}.wav`));
+      zip.generateAsync({type: 'nodebuffer'})
+        .then(function(content) {
+          res.setHeader('X-FileName', `${filename}.zip`);
+          res.attachment(`${filename}.zip`);
+          res.send(content)
+        }.bind(res));
+    }
+  } catch (err) {
+    next(err);
+  }
+}
+
+exports.speaker = async (req, res, next) => {
+  try {
+    const data = res.data;
+    const options = req.query;
+    options.raw = (options.raw && options.raw != "false");
+    options.api = (options.api && options.api != "false");
+    if (options.api) {
+      options.raw = true;
+    }
+    const transcription = await res.app.service('transcriptions').get(data.id);
+    const doc = await res.app.service('documents').get(transcription.documentId);
+    const diary = await res.app.service('diaries').get(doc.parentId);
+    const sid = diary.profile.subject ? diary.profile.subject.shortcode : 'NOSID';
+    const filename = options.raw ? transcription.documentId : sid;
+
+    const speakerData = createSpeakerData(diary);
+
+    res.setHeader('X-FileName', `${filename}.speaker`);
+    res.attachment(`${filename}.speaker`);
+    res.send(speakerData.join(''));
+  } catch (err) {
+    next(err);
+  }
 }

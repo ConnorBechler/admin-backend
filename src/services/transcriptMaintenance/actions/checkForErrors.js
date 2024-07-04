@@ -2,6 +2,7 @@ const { Forbidden, BadRequest } = require('@feathersjs/errors');
 const unique = require('lodash/uniq');
 const uniqueBy = require('lodash/uniqBy');
 const concat = require('lodash/concat');
+const keys = require('lodash/keys');
 const { occurrences, correctedDateTime } = require('../../../hooks/helpers');
 
 const runner = async (app, data) => {
@@ -20,7 +21,8 @@ const runner = async (app, data) => {
 
   // pull all transcript sentences for sentence- and word-level checks
   const sentences = await SentenceService.find({ query: { transcriptionId: transcript.id } });
-
+  
+  const sentencesSplitBySpeaker = {};
   // checks: sentence-level syntax
   for (const [idx, sentence] of sentences.data.entries()) {
     // TODO: modularize rules for custom usage later, or at least move to function to be called
@@ -87,18 +89,33 @@ const runner = async (app, data) => {
         target: `TIMES`
       });
     }
+    //
+    // 20231102 - move to sentencesSplitBySpeaker in order to worry about overlap per speaker,
+    //   not globally in a transcript
+    //
     // check for overlapping, end after next start
-    if ( idx + 1 < sentences.data.length) {
-      const overLapping = (sentence.endTime - sentences.data[idx + 1].startTime) > 0;
-      if (overLapping) {
-        errors.push({
-          ...defaultContents,
-          errorId: `${sentence.id}-OVERLAP+`,
-          type: 'OVERLAP',
-          target: `Next @ ${sentences.data[idx + 1].startTime}`
-        });
-      }
-    }
+    typeof sentencesSplitBySpeaker[sentence.metadata.speaker] === 'object'
+      ? sentencesSplitBySpeaker[sentence.metadata.speaker].push({
+          id: sentence.id,
+          startTime: sentence.startTime,
+          endTime: sentence.endTime
+        })
+      : sentencesSplitBySpeaker[sentence.metadata.speaker] = [{
+          id: sentence.id,
+          startTime: sentence.startTime,
+          endTime: sentence.endTime
+        }];
+    // if ( idx + 1 < sentences.data.length) {
+    //   const overLapping = (sentence.endTime - sentences.data[idx + 1].startTime) > 0;
+    //   if (overLapping) {
+    //     errors.push({
+    //       ...defaultContents,
+    //       errorId: `${sentence.id}-OVERLAP+`,
+    //       type: 'OVERLAP',
+    //       target: `Next @ ${sentences.data[idx + 1].startTime}`
+    //     });
+    //   }
+    // }
     
     /*
     // 20210918 - disabled as requested
@@ -147,6 +164,24 @@ const runner = async (app, data) => {
     }
     */
 
+  }
+
+
+  for (speakerKey of keys(sentencesSplitBySpeaker)) {
+    for (const [idx, sentence] of sentencesSplitBySpeaker[speakerKey].entries()) {
+      if ( idx + 1 < sentencesSplitBySpeaker[speakerKey].length) {
+        const overLapping = (sentence.endTime - sentencesSplitBySpeaker[speakerKey][idx + 1].startTime) > 0;
+        if (overLapping) {
+          errors.push({
+            id: sentence.id,
+            startTime: sentence.startTime,
+            errorId: `${sentence.id}-OVERLAP+`,
+            type: 'OVERLAP',
+            target: `Next @ ${sentencesSplitBySpeaker[speakerKey][idx + 1].startTime}`
+          });
+        }
+      }
+    }
   }
 
 

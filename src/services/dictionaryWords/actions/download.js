@@ -1,38 +1,17 @@
-const { parseAsync } = require('json2csv');
-const { correctedDateTime } = require('../../../hooks/helpers');
+const fs = require('fs').promises;
 
 const runner = async (req, res, next) => {
-  console.log()
-  const options = {
-    header: false,
-    fields: [
-      {
-        label: 'word',
-        value: 'word'
-      },
-      {
-        label: 'phonemes',
-        value: 'phonemes'
-      },
-    ],
-    delimiter: '  ',
-    quote: '',
-    eol: ' \n',
-  };
-
-  const filename = correctedDateTime().toISOString().substr(0, 10) + '_dict.txt';
-
-  try {
-    parseAsync(res.data, options)
-      .then((ret) => {
-        res.setHeader('X-FileName', filename);
-        res.attachment(filename);
-        res.send(ret);
-      })
-      .catch((err) => { throw err });
-  }
-  catch (err) {
-    console.log(err)
+  if (res.data.fileContents) {
+    res.setHeader('X-FileName', res.data.filename);
+    res.attachment(res.data.filename);
+    res.send(res.data.fileContents);
+  } else {
+    await fs.readFile(`${res.data.file}`)
+      .then(file => {
+        res.setHeader('X-FileName', res.data.filename);
+        res.attachment(res.data.filename);
+        res.send(file);
+      });
   }
 }
 

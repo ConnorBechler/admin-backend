@@ -6,6 +6,7 @@ const { isNotAdmin } = require('../../hooks/helpers');
 const FixMetadata = require('./actions/fixMetadata');
 const RequestNewTranscript = require('./actions/requestNewTranscript');
 const CheckUniqueSID = require('./actions/checkUniqueSID');
+const GetDiariesList = require('./actions/getDiariesList');
 
 const options = {
   path: '/adminMaintenance',
@@ -18,6 +19,9 @@ module.exports = function (app) {
   app.use('/adminMaintenance', {
     async create (data, params) {
       switch (data.action) {
+        case 'diary:getList':
+          return await GetDiariesList(app, data);
+          break;
         case 'diary:fixMetadata':
           return await FixMetadata(app, data);
           break;

@@ -27,6 +27,8 @@ module.exports = function(app) {
       // E.g. to send real-time events only to admins use
       if(user.roles.includes('admin') || user.roles.includes('super')) { app.channel('admins').join(connection); }
       if(user.roles.includes('ra') || user.roles.includes('ga')) { app.channel('assistants').join(connection); }
+      if(user.roles.includes('researchManager')) { app.channel('research').join(connection); }
+      if(user.roles.includes('transcriptManager')) { app.channel('transcript').join(connection); }
 
       // If the user has joined e.g. chat rooms
       // if(Array.isArray(user.rooms)) user.rooms.forEach(room => app.channel(`rooms/${room.id}`).join(connection));

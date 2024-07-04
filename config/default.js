@@ -2,7 +2,7 @@ module.exports = {
   'host': 'localhost',
   'port': process.env.PORT,
   'public': '../public/',
-  'uploads': '../../storage',
+  'uploads': process.env.STORAGE_PATH,
   'paginate': {
     'default': 25,
     'max': 99999
@@ -21,8 +21,8 @@ module.exports = {
       'header': {
         'typ': 'bearer'
       },
-      'audience': 'app.midiaries.org',
-      'issuer': 'app.midiaries',
+      'audience': process.env.JWT_AUDIENCE,
+      'issuer': process.env.JWT_ISSUER,
       'algorithm': 'HS512',
       'expiresIn': '8h'
     },
