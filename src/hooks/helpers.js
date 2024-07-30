@@ -130,7 +130,8 @@ exports.assignNextSID = async hook => {
 
   const ret = await sequelizeClient.query(rawq, { type: Sequelize.QueryTypes.SELECT });
   delete hook.data.assignSID;
-  hook.data.shortcode = `${process.env.SUBJECT_PREFIX}-${ret[0].sid.toString().padStart(process.env.SUBJECT_LENGTH, '0') || "1".padStart(process.env.SUBJECT_LENGTH, '0')}`;
+
+  hook.data.shortcode = ret.length ? `${process.env.SUBJECT_PREFIX}-${ret[0].sid.toString().padStart(process.env.SUBJECT_LENGTH, '0')}` : `${process.env.SUBJECT_PREFIX}-${"1".padStart(process.env.SUBJECT_LENGTH, '0')}`;
 }
 
 exports.generateRandomShortcode = config => async hook => {
