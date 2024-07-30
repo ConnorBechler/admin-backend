@@ -1,6 +1,6 @@
 {
-  "name": "mi-diaries-framework-backend",
-  "description": "MI Diaries Framework - Backend",
+  "name": "mi-diaries-research-framework-backend",
+  "description": "MI Diaries Research Framework - Backend",
   "version": "1.11.5",
   "homepage": "",
   "main": "src",
