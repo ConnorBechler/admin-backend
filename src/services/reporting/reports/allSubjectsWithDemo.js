@@ -13,10 +13,6 @@ const reportOutput = async (app, params) => {
         subjects.metadata->>'$.coded.gender' as 'coded_gender',
         subjects.metadata->>'$.ethnicity' as 'ethnicity',
         subjects.metadata->>'$.coded.ethnicity' as 'coded_ethnicity',
-        subjects.metadata->>'$.locationCurrent' as 'locationCurrent',
-        subjects.metadata->>'$.locationGrowingUp' as 'locationGrowingUp',
-        subjects.metadata->>'$.coded.locationRaised' as 'coded_locationRaised',
-        subjects.metadata->>'$.coded.locationParents' as 'coded_locationParents',
         count(diaries.id) as 'diaryCount',
         sum(diaries.metadata->>"$.duration") / 60 as 'diaryLengthTotalMinutes',
         paymentGroups.shortName as paymentGroup

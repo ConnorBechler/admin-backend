@@ -24,7 +24,6 @@ module.exports = {
         hook.data.metadata.coded.birthYear = hook.data.metadata.dateOfBirth ? hook.data.metadata.dateOfBirth.substr(0, 4) : null;
         hook.data.metadata.coded.gender = hook.data.metadata.gender || null;
         hook.data.metadata.coded.ethnicityNotes = hook.data.metadata.ethnicity || null;
-        hook.data.metadata.coded.locationRaisedNotes = hook.data.metadata.locationGrowingUp || null;
       },
     ],
     update: [
