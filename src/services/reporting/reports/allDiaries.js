@@ -12,7 +12,6 @@ const reportOutput = async (app, params) => {
     from diaries
     left join profiles on profiles.id = diaries.profileId
     left join subjects on subjects.id = profiles.subjectId
-    where subjects.metadata->>"$.participant_category" != 'Test'
     group by profiles.subjectId, diaries.metadata->>"$.diaryDate", diaries.metadata->>"$.sequence", subjects.metadata->>"$.participant_category"
     order by diaries.metadata->>"$.diaryDate" DESC, subjects.shortcode ASC, diaries.metadata->>"$.sequence" ASC`;
 
