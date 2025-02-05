@@ -7,6 +7,7 @@ const FixMetadata = require('./actions/fixMetadata');
 const RequestNewTranscript = require('./actions/requestNewTranscript');
 const CheckUniqueSID = require('./actions/checkUniqueSID');
 const GetDiariesList = require('./actions/getDiariesList');
+const RemoveDiary = require('./actions/removeDiary');
 
 const options = {
   path: '/adminMaintenance',
@@ -24,6 +25,9 @@ module.exports = function (app) {
           break;
         case 'diary:fixMetadata':
           return await FixMetadata(app, data);
+          break;
+        case 'diary:remove':
+          return await RemoveDiary(app, data);
           break;
         case 'diary:requestNewTranscript':
           return await RequestNewTranscript(app, data);

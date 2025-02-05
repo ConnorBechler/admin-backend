@@ -66,7 +66,7 @@ module.exports = function (app) {
               return s;
             })
             let filename = options.raw ? transcription.documentId : (sid + '_' + (diary.metadata.diaryDate || new Date(new Date(diary.createdAt).getTime() - new Date(diary.createdAt).getTimezoneOffset() * 60 * 1000).toISOString().substr(0, 10)) + '_' + (diary.metadata.sequence.toString().padStart(2, 0) || '00') + '_rev' + transcription.revision + (options.redact ? '-redacted' : ''));
-            filename = transcription.edited ? `${filename}-corrected` : filename;
+            filename = (diary.metadata.editingStatus && diary.metadata.editingStatus == 'Completed') ? `${filename}-corrected` : filename;
             await parseAsync(tsSentences, options)
               .then(async (ret) => {
                 try {

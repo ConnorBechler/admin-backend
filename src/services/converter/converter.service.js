@@ -309,7 +309,7 @@ exports.textgrid = async (req, res, next) => {
     const { data: sentences } = await res.app.service('transcriptSentences').find({ query: { transcriptionId: transcription.id }});
     const sid = diary.profile.subject ? diary.profile.subject.shortcode : 'NOSID';
     const tsSentences = createSentenceObjects(sid, options, sentences);
-    let filename = options.raw ? transcription.documentId + (options.redact ? '-redacted' : '') : (sid + '_' + (diary.metadata.diaryDate || new Date(new Date(diary.createdAt).getTime() - new Date(diary.createdAt).getTimezoneOffset() * 60 * 1000).toISOString().substr(0, 10)) + '_' + (diary.metadata.sequence.toString().padStart(2, 0) || '00') + '_rev' + transcription.revision + (options.redact ? '-redacted' : '') + (transcription.edited ? '-corrected' : ''));
+    let filename = options.raw ? transcription.documentId + (options.redact ? '-redacted' : '') : (sid + '_' + (diary.metadata.diaryDate || new Date(new Date(diary.createdAt).getTime() - new Date(diary.createdAt).getTimezoneOffset() * 60 * 1000).toISOString().substr(0, 10)) + '_' + (diary.metadata.sequence.toString().padStart(2, 0) || '00') + '_rev' + transcription.revision + (options.redact ? '-redacted' : '') + ((diary.metadata.editingStatus && diary.metadata.editingStatus == 'Completed') ? '-corrected' : ''));
     const speakerNumbers = [...new Set(tsSentences.map(s => s.metadata.speaker))];
 
     const speakerData = createSpeakerData(diary);

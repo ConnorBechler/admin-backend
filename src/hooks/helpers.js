@@ -67,9 +67,10 @@ exports.checkWorkerJobs = (hook) => {
     if (hook.data && hook.data.action && hook.data.action == 'checkForWork') {
       const activeJobs = await hook.app.service('processingJobs').find( { query: {
         remoteWorkerId: hook.data.remoteWorker.id,
-        status: {
-          $ne: 999,
-        },
+        $and: [
+          { status: { $ne: 999 } },
+          { status: { $ne: -1 } },
+        ],
         $limit: 0,
       }});
       if (activeJobs && activeJobs.total) {
@@ -89,8 +90,6 @@ exports.cleanupRemoteWorkerRequest = (hook) => {
     if (hook.params && hook.params.query && hook.params.query.remoteWorkerKey) {
       delete hook.params.query.remoteWorkerKey;
     }
-    console.log('hook.data: ', hook.data);
-    console.log('hook.params: ', hook.params);
   }
 }
 
@@ -130,7 +129,8 @@ exports.assignNextSID = async hook => {
 
   const ret = await sequelizeClient.query(rawq, { type: Sequelize.QueryTypes.SELECT });
   delete hook.data.assignSID;
-  hook.data.shortcode = `${process.env.SUBJECT_PREFIX}-${ret[0].sid.toString().padStart(process.env.SUBJECT_LENGTH, '0') || "1".padStart(process.env.SUBJECT_LENGTH, '0')}`;
+
+  hook.data.shortcode = ret.length ? `${process.env.SUBJECT_PREFIX}-${ret[0].sid.toString().padStart(process.env.SUBJECT_LENGTH, '0')}` : `${process.env.SUBJECT_PREFIX}-${"1".padStart(process.env.SUBJECT_LENGTH, '0')}`;
 }
 
 exports.generateRandomShortcode = config => async hook => {

@@ -20,7 +20,7 @@ const getDiariesList = async (app, { searchString, params: dataParams}, params) 
       `;
 
   if (searchString) {
-    queryWhere.push(`(UPPER(subjects.shortcode) LIKE '%${searchString.toUpperCase()}%' OR diaries.metadata->>"$.diaryDate" LIKE '%${searchString}%' OR UPPER(subjects.metadata->>"$.age_category") LIKE '%${searchString.toUpperCase()}%')`);
+    queryWhere.push(`(UPPER(subjects.shortcode) LIKE '%${searchString.toUpperCase()}%' OR diaries.metadata->>"$.diaryDate" LIKE '%${searchString}%' OR UPPER(subjects.metadata->>"$.participant_category") LIKE '%${searchString.toUpperCase()}%')`);
   }
 
   if (!dataParams.showHiddenDiaries) {

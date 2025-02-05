@@ -89,6 +89,15 @@ const runner = async (app, data) => {
         target: `TIMES`
       });
     }
+    // check for numbers that haven't been changed to the word version
+    if (/\d/.test(sentence.content)) {
+      errors.push({
+        ...defaultContents,
+        errorId: `${sentence.id}-NUMBERS`,
+        type: 'NUMBERS',
+      });
+    }
+
     //
     // 20231102 - move to sentencesSplitBySpeaker in order to worry about overlap per speaker,
     //   not globally in a transcript
