@@ -7,6 +7,8 @@ const reportOutput = async (app, params) => {
   let rawq = `select
       subjects.shortcode as 'subjectId',
         subjects.email,
+        subjects.metadata->>'$.source' as 'source',
+        subjects.createdAt,
         subjects.metadata->>'$.dateOfBirth' as 'dateOfBirth',
         subjects.metadata->>'$.coded.birthYear' as 'coded_birthYear',
         subjects.metadata->>'$.gender' as 'gender',
