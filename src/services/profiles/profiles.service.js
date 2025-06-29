@@ -97,11 +97,44 @@ module.exports = function (app) {
           },
         };
 
+        // fix to still fetch longest and total recording lengths, even if no pay periods set
+        profile = await ProfileService.get(params.route.id);
+        if (profile) {
+          if (profile.subject && profile.subject.id) {
+            // profile has subjectId; include _all_ profiles associated to subject
+            let allProfiles = await ProfileService.find({ query: { subjectId: profile.subject.id, $limit: 99999 }});
+            allDiaries = await DiaryService.find({ query: {
+              profileId: {
+                $in: allProfiles.data.map(p => p.id)
+              },
+              $limit: 99999,
+            }});
+          } else {
+            // no subjectId yet; include only this profile's diaries
+            allDiaries = await DiaryService.find({ query: {
+              profileId: profile.id,
+              $limit: 99999
+            }});
+          }
+
+          // needs natural sort as DB will not
+          ret.longestRecordingMinutes = allDiaries.data.length
+            ? Number((allDiaries.data.sort((a, b) => (a.metadata.duration > b.metadata.duration) ? -1 : 1)[0].metadata.duration / 60).toFixed(0))
+            : 0;
+          ret.totalContributionMinutes = Number(getDurationSums(allDiaries.data).toFixed(0));
+
+        } else {
+          // kinda useless since no one ever gets this hahah
+          return new BadRequest('No profile found by this id');
+        }
+
         const { data: allPayPeriods } = await DiaryPayPeriodService.find({ query: {
           startDate: { $lte: correctedDateTime().toISOString().substr(0, 10) },
           $sort: { startDate: -1 },
         }});
 
+
+        // now that the subject's longest and total contributions are done, actually do the streaks/goals
         if (allPayPeriods.length) {
           // remove 'current' goal from later streaks
           const payPeriodData = allPayPeriods.shift();
@@ -115,59 +148,26 @@ module.exports = function (app) {
 
             ret.timeLeftCurrent = timeTo(endDate);
             ret.timeToNext = timeTo(nextStart);
-
-
-            profile = await ProfileService.get(params.route.id);
-            if (profile) {
-              if (profile.subject && profile.subject.id) {
-                // profile has subjectId; include _all_ profiles associated to subject
-                let allProfiles = await ProfileService.find({ query: { subjectId: profile.subject.id, $limit: 99999 }});
-                allDiaries = await DiaryService.find({ query: {
-                  profileId: {
-                    $in: allProfiles.data.map(p => p.id)
-                  },
-                  $limit: 99999,
-                }});
-              } else {
-                // no subjectId yet; include only this profile's diaries
-                allDiaries = await DiaryService.find({ query: {
-                  profileId: profile.id,
-                  $limit: 99999
-                }});
-              }
-
-              // needs natural sort as DB will not
-              ret.longestRecordingMinutes = allDiaries.data.length
-                ? Number((allDiaries.data.sort((a, b) => (a.metadata.duration > b.metadata.duration) ? -1 : 1)[0].metadata.duration / 60).toFixed(0))
-                : 0;
-              ret.totalContributionMinutes = Number(getDurationSums(allDiaries.data).toFixed(0));
-              // duration for only current goal
-              ret.duration = Number(getDurationSums(allDiaries.data, payPeriodData.startDate, payPeriodData.endDate).toFixed(1));
-
-              for (const [ppIdx, payPeriod] of allPayPeriods.entries()) {
-                // calculate past period durations, cast to integer for flattening
-                goalsMet[ppIdx] = +(Number(getDurationSums(allDiaries.data, payPeriod.startDate, payPeriod.endDate).toFixed(1)) >= payPeriod.goal);
-              }
-
-              // find index of first failed goal
-              ret.currentStreak = goalsMet.findIndex(gm => gm == 0);
-
-              const flatGoalsMet = goalsMet.join('');
-              let match;
-
-              // find streaks and stash longest (frontend will override if currentStreak + 1 > bestStreak)
-              while (match = regex.exec(flatGoalsMet)) {
-                ret.bestStreak = match[0].length > ret.bestStreak ? match[0].length : ret.bestStreak;
-              }
-
-            } else {
-              // kinda useless since no one ever gets this hahah
-              return new BadRequest('No profile found by this id');
-            }
           }
-        } else {
-              // ALSO kinda useless since no one ever gets this
-          return new BadRequest('No biweekly period found for this date?');
+          // duration for only current goal
+          ret.duration = Number(getDurationSums(allDiaries.data, payPeriodData.startDate, payPeriodData.endDate).toFixed(1));
+
+          for (const [ppIdx, payPeriod] of allPayPeriods.entries()) {
+            // calculate past period durations, cast to integer for flattening
+            goalsMet[ppIdx] = +(Number(getDurationSums(allDiaries.data, payPeriod.startDate, payPeriod.endDate).toFixed(1)) >= payPeriod.goal);
+          }
+
+          // find index of first failed goal
+          ret.currentStreak = goalsMet.findIndex(gm => gm == 0);
+          ret.currentStreak = ret.currentStreak < 0 ? 0 : ret.currentStreak;
+
+          const flatGoalsMet = goalsMet.join('');
+          let match;
+
+          // find streaks and stash longest (frontend will override if currentStreak + 1 > bestStreak)
+          while (match = regex.exec(flatGoalsMet)) {
+            ret.bestStreak = match[0].length > ret.bestStreak ? match[0].length : ret.bestStreak;
+          }
         }
         return ret;
       }
