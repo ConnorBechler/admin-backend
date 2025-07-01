@@ -84,6 +84,7 @@ module.exports = function (app) {
           bestStreak: 0,
           duration: 0,
           goal: 0,
+          usingGoals: false,
           message: '',
           timeLeftCurrent: {
             days: 0,
@@ -136,6 +137,7 @@ module.exports = function (app) {
 
         // now that the subject's longest and total contributions are done, actually do the streaks/goals
         if (allPayPeriods.length) {
+          ret.usingGoals = true;
           // remove 'current' goal from later streaks
           const payPeriodData = allPayPeriods.shift();
           if (payPeriodData.id) {
