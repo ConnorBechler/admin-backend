@@ -20,7 +20,7 @@ exports.cancel = error => hook => {
 
 exports.lacksMatchingDiaryID = async hook => {
   /* Provides a method for verifiying if a diary was uploaded by a basic user, if the diary
-  in question has a matching email */
+  in question has a matching email -> this was my old solution */
   const sequelizeClient = hook.app.get('sequelizeClient');
   var diaryId = false;
   var docId = false;
@@ -80,7 +80,7 @@ exports.lacksMatchingDiaryID = async hook => {
 }
 
 exports.lacksMatchingSubId = async hook => { 
-  console.log('AUTHENTICATING')
+  /* New method using internal services rather than sql */
   const SubjectService = hook.app.service('subjects');
   const ProfileService = hook.app.service('profiles');
   const DiaryService = hook.app.service('diaries');
@@ -95,7 +95,6 @@ exports.lacksMatchingSubId = async hook => {
   if (hook.path == "diaries") { diaryId = hook.id}
   //If no diaryId provided, check to see if docId available
   if (!diaryId) {
-    const DocumentService = hook.app.service('documents');
     if (hook.path == "transcriptions") {
       if (!("documentId" in hook.params.query)) {transcriptionId = hook.id}
         else {docId = hook.params.query.documentId}
@@ -103,7 +102,6 @@ exports.lacksMatchingSubId = async hook => {
     if (hook.path == "audio") {docId = hook.id}
     // If no docId provided, check to see if transcriptionId available
     if (!docId) {
-      const TranscriptionService = hook.app.service('transcriptions');
       if (hook.path == "transcriptSentences") {
         if (hook.method == 'find') {transcriptionId = hook.params.query.transcriptionId}
         else if (hook.method == 'remove') {
@@ -119,27 +117,27 @@ exports.lacksMatchingSubId = async hook => {
       }
       if (hook.path == "transcriptMaintenance") {transcriptionId = hook.data.id}
       // Get documentId from transcriptionId
+      const TranscriptionService = hook.app.service('transcriptions');
       transcription = await TranscriptionService.get(transcriptionId);
       docId = transcription.documentId;
     }
     // Get DiaryId from documentId
+    const DocumentService = hook.app.service('documents');
     document = await DocumentService.get(docId);
     diaryId = document.parentId;
   }
-  
+  // Get subject with matching email; if none found, authentication fails
   subjects = await SubjectService.find({query : {email : hook.params.user.email}});
   if (subjects.data.length == 1) {userSubjectId = subjects.data.at(0).id}
   else {result = true}
+  // Get all profiles associated with subject, and then all diaries associated with those profiles
   if (userSubjectId) {
     let allProfiles = await ProfileService.find({ query: { subjectId: userSubjectId, $limit: 99999 }});
-    allDiaries = await DiaryService.find({ query: {
-      profileId: {
-        $in: allProfiles.data.map(p => p.id)
-      },
+    allDiaries = await DiaryService.find({ query: { profileId: { $in: allProfiles.data.map(p => p.id) },
       $limit: 99999,
     }});
   }
-
+  //Check if the derived diaryId is present in the user's approved diaries
   let approved_diaries = allDiaries.data.map(d => d.id)
   if (!approved_diaries.includes(diaryId)) {result = true}  
   return result;
