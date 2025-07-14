@@ -18,6 +18,70 @@ exports.cancel = error => hook => {
   throw new Forbidden(error || 'Ha. No. No Touchy.');
 }
 
+exports.lacksMatchingDiaryID = async hook => {
+  /* Provides a method for verifiying if a diary was uploaded by a basic user, if the diary
+  in question has a matching email */
+  const sequelizeClient = hook.app.get('sequelizeClient');
+  console.log(hook.path);
+  var diaryId = false;
+  var docId = false;
+  var result = false;
+  if (hook.path == "documents") { diaryId = hook.params.query.parentId }
+  if (hook.path == "diaries") { diaryId = hook.id}
+  if (!diaryId) {
+    if (hook.path == "transcriptions") { 
+      if (!("documentId" in hook.params.query)) {transcriptionId = hook.id}
+      else {docId = hook.params.query.documentId}
+    }
+    if (hook.path == "audio") {docId = hook.id}
+    if (!docId) {
+      if (hook.path == "transcriptSentences") {transcriptionId = hook.params.query.transcriptionId}
+      /* need to figure out text downloading yet */
+      if (hook.path == "transcriptions/:transcriptionId/:type") {transcriptionId = hook.params.route.transcriptionId}
+      if (hook.path == "transcriptMaintenance") {transcriptionId = hook.data.id}
+      let rawq = `
+      SELECT transcriptions.*
+      FROM transcriptions
+        WHERE transcriptions.deletedAt IS NULL
+        AND transcriptions.id LIKE '%${transcriptionId}%';`
+      let ret = await sequelizeClient.query(rawq, { type: Sequelize.QueryTypes.SELECT });
+      if (ret.length == 0) {result = true}
+      docId = ret.at(0).documentId
+      }
+    
+
+    let rawq = `
+      SELECT documents.*
+      FROM documents
+        WHERE documents.deletedAt IS NULL
+        AND documents.id LIKE '%${docId}%';`
+
+    /* console.log(rawq); */
+    let ret = await sequelizeClient.query(rawq, { type: Sequelize.QueryTypes.SELECT });
+    /* console.log(ret) */
+    if (ret.length == 0) {result = true}
+    diaryId = ret.at(0).parentId
+    /* console.log(diaryId) */
+  }
+
+  let rawq2 = `
+    SELECT diaries.*
+    FROM diaries
+    LEFT JOIN profiles ON profiles.id = diaries.profileId
+    LEFT JOIN subjects ON subjects.id = profiles.subjectId
+      WHERE diaries.deletedAt IS NULL
+      AND diaries.active = 1
+      AND subjects.email LIKE '%${hook.params.user.email}%'
+      AND diaries.id LIKE '%${diaryId}%';`
+
+  /* console.log(rawq2) */
+  let ret2 = await sequelizeClient.query(rawq2, { type: Sequelize.QueryTypes.SELECT });
+  /* console.log(ret2)*/
+  if (ret2.length == 0) { result = true }
+  if (result == true) {console.log(hook)}
+  return result;
+}
+
 exports.checkForWorkerKey = (hook) => {
   if ((hook.params && hook.params.query && hook.params.query.remoteWorkerKey) || (hook.data && hook.data.remoteWorkerKey) ) {
     return hook;
