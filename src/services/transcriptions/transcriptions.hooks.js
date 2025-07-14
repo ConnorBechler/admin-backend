@@ -1,13 +1,13 @@
 const { authenticate } = require('@feathersjs/authentication');
 const { iff, isProvider  } = require('feathers-hooks-common');
-const { isNotAdmin, lacksMatchingDiaryID, cancel, checkForWorkerKey, checkWorkerKey, cleanupRemoteWorkerRequest } = require('../../hooks/helpers');
+const { isNotAdmin, lacksMatchingSubId, cancel, checkForWorkerKey, checkWorkerKey, cleanupRemoteWorkerRequest } = require('../../hooks/helpers');
 
 module.exports = {
   before: {
     all: [
       iff(isProvider('external'), iff(checkForWorkerKey, checkWorkerKey(), cleanupRemoteWorkerRequest())
         .else(authenticate('jwt'), iff(isNotAdmin('ra,ga'), 
-        iff(lacksMatchingDiaryID, cancel())))),
+        iff(lacksMatchingSubId, cancel())))),
     ],
     find: [],
     get: [],

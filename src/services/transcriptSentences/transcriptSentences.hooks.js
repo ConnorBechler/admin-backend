@@ -1,13 +1,13 @@
 const { authenticate } = require('@feathersjs/authentication');
 const { iff, isProvider } = require('feathers-hooks-common');
-const { isNotAdmin, lacksMatchingDocID, cancel } = require('../../hooks/helpers');
+const { isNotAdmin, lacksMatchingSubId, cancel } = require('../../hooks/helpers');
 
 module.exports = {
   before: {
     all: [
       iff(isProvider('external'), authenticate('jwt')),
       iff(isProvider('external'), iff(isNotAdmin('ra,ga'), 
-      iff(lacksMatchingDocID, cancel()))),
+      iff(lacksMatchingSubId, cancel()))),
     ],
     find: [],
     get: [],

@@ -2,7 +2,7 @@ const { authenticate } = require('@feathersjs/authentication');
 const { setField } = require('feathers-authentication-hooks');
 const { iff, isProvider } = require('feathers-hooks-common');
 const { shallowPopulate } = require('feathers-shallow-populate');
-const { isNotAdmin, lacksMatchingDiaryID } = require('../../hooks/helpers');
+const { isNotAdmin, lacksMatchingSubId } = require('../../hooks/helpers');
 
 const relations = {
   include: {
@@ -22,12 +22,12 @@ module.exports = {
     find: [
       authenticate('jwt'),
       iff(isProvider('external'), iff(isNotAdmin('ra,ga'), 
-      iff(lacksMatchingDiaryID, restrict))),
+      iff(lacksMatchingSubId, restrict))),
     ],
     get: [
       iff(isProvider('external'), authenticate('jwt')),
       iff(isProvider('external'), iff(isNotAdmin('ra,ga'), 
-      iff(lacksMatchingDiaryID, restrict)))
+      iff(lacksMatchingSubId, restrict)))
     ],
     create: [
       iff(isProvider('external'), authenticate('jwt')),
@@ -44,17 +44,17 @@ module.exports = {
     update: [
       iff(isProvider('external'), authenticate('jwt')),
       iff(isProvider('external'), iff(isNotAdmin('ra, ga'), 
-      iff(lacksMatchingDiaryID, restrict))),
+      iff(lacksMatchingSubId, restrict))),
     ],
     patch: [
       iff(isProvider('external'), authenticate('jwt')),
       iff(isProvider('external'), iff(isNotAdmin('ra, ga'), 
-      iff(lacksMatchingDiaryID, restrict))),
+      iff(lacksMatchingSubId, restrict))),
     ],
     remove: [
       iff(isProvider('external'), authenticate('jwt')),
       iff(isProvider('external'), iff(isNotAdmin('ra, ga'), 
-      iff(lacksMatchingDiaryID, restrict))),
+      iff(lacksMatchingSubId, restrict))),
     ]
   },
 
