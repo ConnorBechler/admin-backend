@@ -18,6 +18,131 @@ exports.cancel = error => hook => {
   throw new Forbidden(error || 'Ha. No. No Touchy.');
 }
 
+exports.lacksMatchingDiaryID = async hook => {
+  /* Provides a method for verifiying if a diary was uploaded by a basic user, if the diary
+  in question has a matching email -> this was my old solution */
+  const sequelizeClient = hook.app.get('sequelizeClient');
+  var diaryId = false;
+  var docId = false;
+  var result = false;
+  if (hook.path == "documents") { diaryId = hook.params.query.parentId }
+  if (hook.path == "diaries") { diaryId = hook.id}
+  if (!diaryId) {
+    if (hook.path == "transcriptions") { 
+      if (!("documentId" in hook.params.query)) {transcriptionId = hook.id}
+      else {docId = hook.params.query.documentId}
+    }
+    if (hook.path == "audio") {docId = hook.id}
+    if (!docId) {
+      if (hook.path == "transcriptSentences") {transcriptionId = hook.params.query.transcriptionId}
+      if (hook.path == "transcriptions/:transcriptionId/:type") {transcriptionId = hook.params.route.transcriptionId}
+      if (hook.path == "transcriptMaintenance") {transcriptionId = hook.data.id}
+      let rawq = `
+      SELECT transcriptions.*
+      FROM transcriptions
+        WHERE transcriptions.deletedAt IS NULL
+        AND transcriptions.id LIKE '%${transcriptionId}%';`
+      let ret = await sequelizeClient.query(rawq, { type: Sequelize.QueryTypes.SELECT });
+      if (ret.length == 0) {result = true}
+      docId = ret.at(0).documentId
+      }
+    
+    let rawq = `
+      SELECT documents.*
+      FROM documents
+        WHERE documents.deletedAt IS NULL
+        AND documents.id LIKE '%${docId}%';`
+
+    /* console.log(rawq); */
+    let ret = await sequelizeClient.query(rawq, { type: Sequelize.QueryTypes.SELECT });
+    /* console.log(ret) */
+    if (ret.length == 0) {result = true}
+    diaryId = ret.at(0).parentId
+    /* console.log(diaryId) */
+  }
+
+  let rawq2 = `
+    SELECT diaries.*
+    FROM diaries
+    LEFT JOIN profiles ON profiles.id = diaries.profileId
+    LEFT JOIN subjects ON subjects.id = profiles.subjectId
+      WHERE diaries.deletedAt IS NULL
+      AND diaries.active = 1
+      AND subjects.email LIKE '%${hook.params.user.email}%'
+      AND diaries.id LIKE '%${diaryId}%';`
+
+  /* console.log(rawq2) */
+  let ret2 = await sequelizeClient.query(rawq2, { type: Sequelize.QueryTypes.SELECT });
+  /* console.log(ret2)*/
+  if (ret2.length == 0) { result = true }
+  if (result == true) {console.log(hook)}
+  return result;
+}
+
+exports.lacksMatchingSubId = async hook => { 
+  /* New method using internal services rather than sql */
+  const SubjectService = hook.app.service('subjects');
+  const ProfileService = hook.app.service('profiles');
+  const DiaryService = hook.app.service('diaries');
+  let allDiaries = [];
+  let userSubjectId = null;
+  let subjects = {};
+  var diaryId = false;
+  var docId = false;
+  var result = false;
+
+  if (hook.path == "documents") { diaryId = hook.params.query.parentId }
+  if (hook.path == "diaries") { diaryId = hook.id}
+  //If no diaryId provided, check to see if docId available
+  if (!diaryId) {
+    if (hook.path == "transcriptions") {
+      if (!("documentId" in hook.params.query)) {transcriptionId = hook.id}
+        else {docId = hook.params.query.documentId}
+      }
+    if (hook.path == "audio") {docId = hook.id}
+    // If no docId provided, check to see if transcriptionId available
+    if (!docId) {
+      if (hook.path == "transcriptSentences") {
+        if (hook.method == 'find') {transcriptionId = hook.params.query.transcriptionId}
+        else if (hook.method == 'remove') {
+          // Get transcriptionId from transcriptSentences service
+          const TranscriptSentences = hook.app.service('transcriptSentences');
+          transcriptSentence = await TranscriptSentences.get(hook.id);
+          transcriptionId = transcriptSentence.transcriptionId;
+        }
+        else {transcriptionId = hook.data.transcriptionId}
+      }
+      if (hook.path == "transcriptions/:transcriptionId/:type") {
+        transcriptionId = hook.params.route.transcriptionId
+      }
+      if (hook.path == "transcriptMaintenance") {transcriptionId = hook.data.id}
+      // Get documentId from transcriptionId
+      const TranscriptionService = hook.app.service('transcriptions');
+      transcription = await TranscriptionService.get(transcriptionId);
+      docId = transcription.documentId;
+    }
+    // Get DiaryId from documentId
+    const DocumentService = hook.app.service('documents');
+    document = await DocumentService.get(docId);
+    diaryId = document.parentId;
+  }
+  // Get subject with matching email; if none found, authentication fails
+  subjects = await SubjectService.find({query : {email : hook.params.user.email}});
+  if (subjects.data.length == 1) {userSubjectId = subjects.data.at(0).id}
+  else {result = true}
+  // Get all profiles associated with subject, and then all diaries associated with those profiles
+  if (userSubjectId) {
+    let allProfiles = await ProfileService.find({ query: { subjectId: userSubjectId, $limit: 99999 }});
+    allDiaries = await DiaryService.find({ query: { profileId: { $in: allProfiles.data.map(p => p.id) },
+      $limit: 99999,
+    }});
+  }
+  //Check if the derived diaryId is present in the user's approved diaries
+  let approved_diaries = allDiaries.data.map(d => d.id)
+  if (!approved_diaries.includes(diaryId)) {result = true}  
+  return result;
+}
+
 exports.checkForWorkerKey = (hook) => {
   if ((hook.params && hook.params.query && hook.params.query.remoteWorkerKey) || (hook.data && hook.data.remoteWorkerKey) ) {
     return hook;

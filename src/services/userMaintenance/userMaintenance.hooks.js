@@ -1,6 +1,6 @@
 const { authenticate } = require('@feathersjs/authentication');
 const { iff } = require('feathers-hooks-common');
-const { isNotAdmin, cancel, lacksMatchingSubId } = require('../../hooks/helpers');
+const { isNotAdmin, cancel } = require('../../hooks/helpers');
 
 
 module.exports = {
@@ -10,7 +10,7 @@ module.exports = {
     get: [],
     create: [
       authenticate('jwt'),
-      iff(isNotAdmin('ra, ga'), iff(lacksMatchingSubId, cancel())),
+      iff(isNotAdmin('ra, ga, user'), cancel()),
     ],
     update: [],
     patch: [],

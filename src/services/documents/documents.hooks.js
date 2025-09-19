@@ -5,7 +5,7 @@ const fs = require('fs');
 const TranscriberService = require('../transcriber/transcriber.service.js');
 const ManualCreateTranscript = require('../transcriptMaintenance/actions/manualCreate.js');
 const { getMetadata, saveStreamCopy, saveWavCopy } = require('../converter/converter.service.js');
-const { isNotAdmin, cancel } = require('../../hooks/helpers');
+const { isNotAdmin, lacksMatchingSubId, cancel } = require('../../hooks/helpers');
 
 const fileTypes = [
   "m4a",
@@ -55,27 +55,33 @@ module.exports = {
     ],
     find: [
       authenticate('jwt'),
-      iff(isProvider('external'), iff(isNotAdmin('ra, ga'), cancel())),
+      iff(isProvider('external'), iff(isNotAdmin('ra, ga'), 
+      iff(lacksMatchingSubId, cancel()))),
     ],
     get: [
       authenticate('jwt'),
-      iff(isProvider('external'), iff(isNotAdmin('ra, ga'), cancel())),
+      iff(isProvider('external'), iff(isNotAdmin('ra, ga'), 
+      iff(lacksMatchingSubId, cancel()))),
     ],
     create: [
       iff(isProvider('rest'), checkKey)
-        .else(authenticate('jwt'), iff(isNotAdmin('ra, ga'), cancel())),
+        .else(authenticate('jwt'), iff(isNotAdmin('ra, ga'), 
+        iff(lacksMatchingSubId, cancel()))),
     ],
     update: [
       authenticate('jwt'),
-      iff(isProvider('external'), iff(isNotAdmin('ra, ga'), cancel())),
+      iff(isProvider('external'), iff(isNotAdmin('ra, ga'), 
+      iff(lacksMatchingSubId, cancel()))),
     ],
     patch: [
       authenticate('jwt'),
-      iff(isProvider('external'), iff(isNotAdmin('ra, ga'), cancel())),
+      iff(isProvider('external'), iff(isNotAdmin('ra, ga'), 
+      iff(lacksMatchingSubId, cancel()))),
     ],
     remove: [
       authenticate('jwt'),
-      iff(isProvider('external'), iff(isNotAdmin('ra, ga'), cancel())),
+      iff(isProvider('external'), iff(isNotAdmin('ra, ga'), 
+      iff(lacksMatchingSubId, cancel()))),
     ]
   },
 
