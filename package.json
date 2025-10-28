@@ -1,7 +1,7 @@
 {
   "name": "mi-diaries-research-framework-backend",
   "description": "MI Diaries Research Framework - Backend",
-  "version": "1.11.20",
+  "version": "1.11.22",
   "homepage": "",
   "main": "src",
   "license": "see LICENSE file",
