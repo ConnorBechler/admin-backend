@@ -1,16 +1,10 @@
 {
   "name": "mi-diaries-research-framework-backend",
   "description": "MI Diaries Research Framework - Backend",
-  "version": "1.11.15",
+  "version": "1.11.22",
   "homepage": "",
   "main": "src",
-  "keywords": [
-    "feathers"
-  ],
-  "author": {
-    "name": "Russ Werner",
-    "email": "wernerru@msu.edu"
-  },
+  "license": "see LICENSE file",
   "contributors": [],
   "bugs": {},
   "directories": {

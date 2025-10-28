@@ -3,13 +3,14 @@ const { iff, isProvider, discard, disallow, preventChanges } = require('feathers
 const { Forbidden } = require('@feathersjs/errors');
 const { setField } = require('feathers-authentication-hooks');
 const fs = require('fs');
-const { isNotAdmin, cancel, checkForWorkerKey, checkWorkerKey, cleanupRemoteWorkerRequest } = require('../../hooks/helpers');
+const { isNotAdmin, lacksMatchingDiaryID, lacksMatchingSubId, cancel, checkForWorkerKey, checkWorkerKey, cleanupRemoteWorkerRequest } = require('../../hooks/helpers');
 
 module.exports = {
   before: {
     all: [
       iff(isProvider('external'), iff(checkForWorkerKey, checkWorkerKey(), cleanupRemoteWorkerRequest())
-        .else(authenticate('jwt'), iff(isNotAdmin('ra,ga'), cancel()))),
+        .else(authenticate('jwt'), iff(isNotAdmin('ra,ga'), 
+        iff(lacksMatchingSubId, cancel())))),
     ],
     find: [],
     get: [

@@ -14,6 +14,7 @@ const transcriptions = require('./transcriptions/transcriptions.service.js');
 const transcriptSentences = require('./transcriptSentences/transcriptSentences.service.js');
 const transcriptMaintenance = require('./transcriptMaintenance/transcriptMaintenance.service.js');
 const adminMaintenance = require('./adminMaintenance/adminMaintenance.service.js');
+const userMaintenance = require('./userMaintenance/userMaintenance.service.js');
 const reporting = require('./reporting/reporting.service.js');
 const subjects = require('./subjects/subjects.service.js');
 const subjectMaintenance = require('./subjectMaintenance/subjectMaintenance.service.js');
@@ -39,6 +40,7 @@ module.exports = function (app) {
   app.configure(transcriptSentences);
   app.configure(transcriptMaintenance);
   app.configure(adminMaintenance);
+  app.configure(userMaintenance);
   app.configure(reporting);
   app.configure(subjects);
   app.configure(subjectMaintenance);

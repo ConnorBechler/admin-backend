@@ -5,6 +5,7 @@ const notifier = require('../mailer/notifier');
 const { isNotAdmin } = require('../../hooks/helpers');
 const DurationSummary = require('./reports/durationSummary');
 const ContentSearch = require('./reports/contentSearch');
+const DiaryFilterer = require('./reports/diaryFilterer');
 const AllDiaries = require('./reports/allDiaries');
 const AllSubjectsWithDemo = require('./reports/allSubjectsWithDemo');
 
@@ -26,6 +27,9 @@ module.exports = function (app) {
             break;
           case 'reports:contentSearch':
             return await ContentSearch(app, data, params);
+            break;
+          case 'reports:diaryFilterer':
+            return await DiaryFilterer(app, data, params);
             break;
           case 'options':
             return options;
