@@ -86,7 +86,7 @@
     const transcriptionService = app.service('transcriptions');
     const sentenceService = app.service('transcriptSentences');
     console.log("Choosing transcription service")
-    if (process.env.ASR_SERVICE == "GCS") {
+    if (process.env.ASR_SERVICE == "GCS" || process.env.ASR_SERVICE === undefined) {
       const destination = app.get('uploads') + '/wav';
       const config = {
         //model: 'PHONE_CALL',
