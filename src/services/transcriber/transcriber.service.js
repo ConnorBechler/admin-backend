@@ -188,7 +188,10 @@
           const axiosInstance = axios.create({
               maxBodyLength: 1000 * 1024 * 1024,
               maxContentLength: 1000 * 1024 * 1024,
-              headers: {"API-Key" : process.env.CUSTOM_ASR_KEY},
+              headers: {"api-key" : process.env.CUSTOM_ASR_KEY,
+                "model" : process.env.CUSTOM_ASR_MODEL,
+                "language" : process.env.CUSTOM_ASR_LANGUAGE
+              },
             });
           
           const response = await axiosInstance.post(`http://${process.env.CUSTOM_ASR_ADDRESS}/upload`, formData, {
